@@ -10,6 +10,7 @@ using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -47,7 +48,18 @@ namespace myPlayer
                 }
             }
         }
-
+        /// <summary>
+        /// 获得字符串中开始和结束字符串中间得值
+        /// </summary>
+        /// <param name="str">字符串</param>
+        /// <param name="s">开始</param>
+        /// <param name="e">结束</param>
+        /// <returns></returns> 
+        public static string GetValue(string str, string s, string e)
+        {
+            Regex rg = new Regex("(?<=(" + s + "))[.\\s\\S]*?(?=(" + e + "))", RegexOptions.Multiline | RegexOptions.Singleline);
+            return rg.Match(str).Value;
+        }
         private void toolStripButton1_Click(object sender, EventArgs e)
         {
             WebClient client = new WebClient();
@@ -59,27 +71,39 @@ namespace myPlayer
         {
             var lines = File.ReadAllLines(filePath);
             var channelGroups = new Dictionary<string, TreeNode>();
-
             TreeNode currentGroup = null;
-
+            TreeNode currentName = null;
             foreach (var line in lines)
             {
                 if (line.StartsWith("#EXTINF"))
                 {
-                    var name = line.Substring(line.IndexOf(',') + 1);
-                    currentGroup = new TreeNode { Text = name };
-                    channelGroups[name] = currentGroup;
-                    treeView1.Nodes.Add(currentGroup);
+                    var grp = GetValue(line, "group-title=\"", "\"");
+                    var name = GetValue(line, "tvg-name=\"", "\"");
+                    
+                    currentGroup = new TreeNode { Text = grp };
+                    bool ye = treeView1.Nodes.Contains(currentGroup);
+                    if (treeView1.Nodes == null || ye != true)
+                    {
+                        currentName = currentGroup.Nodes.Add(name.ToUpper());
+                    }
+                    else 
+                    {
+                        //treeView1.Nodes.Add(currentGroup);
+                    }
+                    
+                    //channelGroups[name] = currentGroup;
+                    //treeView1.Nodes.Add(currentGroup);
                 }
                 else if (!string.IsNullOrWhiteSpace(line) && Uri.IsWellFormedUriString(line, UriKind.Absolute))
                 {
                     if (currentGroup != null)
                     {
-                        currentGroup.Nodes.Add(line);
+                        currentName.Nodes.Add(line);
                     }
                 }
                 else if (line.StartsWith("#EXTM3U"))
                 {
+                    continue;
                     // Ignore this line
                 }
                 else
